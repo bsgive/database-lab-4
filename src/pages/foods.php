@@ -1,3 +1,69 @@
+<?php
+require_once "db.php";
+
+/* DELETE */
+if (isset($_GET['delete'])) {
+    $id = (int)$_GET['delete'];
+    $conn->query("DELETE FROM Foods WHERE FoodID = $id");
+    header("Location: foods.php");
+    exit;
+}
+
+/* CREATE / UPDATE */
+$isEdit = false;
+$editFood = [
+    "FoodID" => "",
+    "Name" => "",
+    "Brand" => "",
+    "TypeofFood" => "",
+    "Price" => "",
+    "ItemWeight" => "",
+    "ClassofFood" => ""
+];
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $foodID = (int)($_POST["FoodID"] ?? 0);
+    $name   = $conn->real_escape_string($_POST["Name"]);
+    $brand  = $conn->real_escape_string($_POST["Brand"]);
+    $type   = $conn->real_escape_string($_POST["TypeofFood"]);
+    $price  = (float)$_POST["Price"];
+    $weight = (float)$_POST["ItemWeight"];
+    $class  = $conn->real_escape_string($_POST["ClassofFood"]);
+
+    if ($foodID > 0) {
+        $sql = "UPDATE Foods SET
+                    Name='$name',
+                    Brand='$brand',
+                    TypeofFood='$type',
+                    Price=$price,
+                    ItemWeight=$weight,
+                    ClassofFood='$class'
+                WHERE FoodID=$foodID";
+        $conn->query($sql);
+    } else {
+        $sql = "INSERT INTO Foods (Name, Brand, TypeofFood, Price, ItemWeight, ClassofFood)
+                VALUES ('$name', '$brand', '$type', $price, $weight, '$class')";
+        $conn->query($sql);
+    }
+
+    header("Location: foods.php");
+    exit;
+}
+
+/* LOAD EDIT TARGET */
+if (isset($_GET["edit"])) {
+    $isEdit = true;
+    $id = (int)$_GET["edit"];
+    $res = $conn->query("SELECT * FROM Foods WHERE FoodID=$id");
+    if ($res && $res->num_rows > 0) {
+        $editFood = $res->fetch_assoc();
+    }
+}
+
+/* READ ALL */
+$foods = $conn->query("SELECT * FROM Foods ORDER BY FoodID DESC");
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -7,21 +73,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <title>Star Admin2 </title>
   <!-- plugins:css -->
-  <link rel="stylesheet" href="assets/vendors/feather/feather.css">
-  <link rel="stylesheet" href="assets/vendors/mdi/css/materialdesignicons.min.css">
-  <link rel="stylesheet" href="assets/vendors/ti-icons/css/themify-icons.css">
-  <link rel="stylesheet" href="assets/vendors/typicons/typicons.css">
-  <link rel="stylesheet" href="assets/vendors/simple-line-icons/css/simple-line-icons.css">
-  <link rel="stylesheet" href="assets/vendors/css/vendor.bundle.base.css">
-  <!-- endinject -->
-  <!-- Plugin css for this page -->
-  <link rel="stylesheet" href="assets/vendors/datatables.net-bs4/dataTables.bootstrap4.css">
-  <link rel="stylesheet" type="text/css" href="assets/js/select.dataTables.min.css">
-  <!-- End plugin css for this page -->
-  <!-- inject:css -->
-  <link rel="stylesheet" href="assets/css/vertical-layout-light/style.css">
-  <!-- endinject -->
-  <link rel="shortcut icon" href="assets/images/favicon.png" />
+  <link rel="stylesheet" href="../assets/vendors/feather/feather.css">
+<link rel="stylesheet" href="../assets/vendors/mdi/css/materialdesignicons.min.css">
+<link rel="stylesheet" href="../assets/vendors/ti-icons/css/themify-icons.css">
+<link rel="stylesheet" href="../assets/vendors/typicons/typicons.css">
+<link rel="stylesheet" href="../assets/vendors/simple-line-icons/css/simple-line-icons.css">
+<link rel="stylesheet" href="../assets/vendors/css/vendor.bundle.base.css">
+<!-- endinject -->
+<!-- Plugin css for this page -->
+<link rel="stylesheet" href="../assets/vendors/datatables.net-bs4/dataTables.bootstrap4.css">
+<link rel="stylesheet" type="text/css" href="../assets/js/select.dataTables.min.css">
+<!-- End plugin css for this page -->
+<!-- inject:css -->
+<link rel="stylesheet" href="../assets/css/vertical-layout-light/style.css">
+<!-- endinject -->
+<link rel="shortcut icon" href="../assets/images/favicon.png" />
 </head>
 
 <body> 
@@ -245,20 +311,22 @@
               <div class="home-tab">
                 <div class="d-sm-flex align-items-center justify-content-between border-bottom">
                   <ul class="nav nav-tabs" role="tablist">
-                    <li class="nav-item">
-                      <a class="nav-link" href="pages/pets.php">Pets</a>
+                         <li class="nav-item">
+                      <a class="nav-link" href="../index.html">Home</a>
+           <li class="nav-item">
+                      <a class="nav-link" href="pets.php">Pets</a>
                     </li>
                     <li class="nav-item">
-                      <a class="nav-link" href="pages/owners.php">Owners</a>
+                      <a class="nav-link" href="owners.php">Owners</a>
                     </li>
-                      <li class="nav-item">
-                      <a class="nav-link" href="pages/foods.php">Foods</a>
-                    </li>
-                    <li class="nav-item">
-                      <a class="nav-link" href="pages/owns.php">Owns</a>
+                   <li class="nav-item">
+                      <a class="nav-link" href="foods.php">Foods</a>
                     </li>
                     <li class="nav-item">
-                      <a class="nav-link border-0" href="pages/purchases.php">Purchases</a>
+                      <a class="nav-link" href="owns.php">Owns</a>
+                    </li>
+                    <li class="nav-item">
+                      <a class="nav-link border-0" href="Purchases.php">Purchases</a>
                     </li>
                   </ul>
                 </div>
@@ -274,11 +342,92 @@
                           <div class="col-12 grid-margin stretch-card">
                             <div class="card card-rounded">
                               <div class="card-body">
-
-                              </div>
+                                <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                    <tr>
+                                        <th>FoodID</th>
+                                        <th>Name</th>
+                                        <th>Brand</th>
+                                        <th>Type of Food</th>
+                                        <th>Price</th>
+                                        <th>Item Weight</th>
+                                        <th>Class of Food</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <?php while ($food = $foods->fetch_assoc()): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($food['FoodID']) ?></td>
+                                        <td><?= htmlspecialchars($food['Name']) ?></td>
+                                        <td><?= htmlspecialchars($food['Brand']) ?></td>
+                                        <td><?= htmlspecialchars($food['TypeofFood']) ?></td>
+                                        <td>$<?= number_format($food['Price'], 2) ?></td>
+                                        <td><?= htmlspecialchars($food['ItemWeight']) ?></td>
+                                        <td><?= htmlspecialchars($food['ClassofFood']) ?></td>
+                                        <td>
+                                        <a href="foods.php?edit=<?= $food['FoodID'] ?>">Edit</a>
+                                        |
+                                        <a href="foods.php?delete=<?= $food['FoodID'] ?>" onclick="return confirm('Are you sure you want to delete this food?');">Delete</a>
+                                        </td>
+                                    </tr>
+                                    <?php endwhile; ?>
+                                    </tbody>
+                                </table>
+                                
+                                <div class="row">
+                                    <div class="col-12 grid-margin stretch-card">
+                                    <div class="card card-rounded">
+                                        <div class="card-body">
+                                        <h4 class="card-title"><?= $isEdit ? 'Edit Food' : 'Add New Food' ?></h4>
+                                        <form method="POST" class="forms-sample">
+                                            <input type="hidden" name="FoodID" value="<?= htmlspecialchars($editFood['FoodID']) ?>">
+                                            
+                                            <div class="form-group">
+                                            <label>Name</label>
+                                            <input type="text" class="form-control" name="Name" value="<?= htmlspecialchars($editFood['Name']) ?>" required>
+                                            </div>
+                                            
+                                            <div class="form-group">
+                                            <label>Brand</label>
+                                            <input type="text" class="form-control" name="Brand" value="<?= htmlspecialchars($editFood['Brand']) ?>" required>
+                                            </div>
+                                            
+                                            <div class="form-group">
+                                            <label>Type of Food</label>
+                                            <input type="text" class="form-control" name="TypeofFood" value="<?= htmlspecialchars($editFood['TypeofFood']) ?>">
+                                            </div>
+                                            
+                                            <div class="form-group">
+                                            <label>Price</label>
+                                            <input type="number" step="0.01" class="form-control" name="Price" value="<?= htmlspecialchars($editFood['Price']) ?>" required>
+                                            </div>
+                                            
+                                            <div class="form-group">
+                                            <label>Item Weight</label>
+                                            <input type="number" step="0.01" class="form-control" name="ItemWeight" value="<?= htmlspecialchars($editFood['ItemWeight']) ?>">
+                                            </div>
+                                            
+                                            <div class="form-group">
+                                            <label>Class of Food</label>
+                                            <input type="text" class="form-control" name="ClassofFood" value="<?= htmlspecialchars($editFood['ClassofFood']) ?>">
+                                            </div>
+                                            
+                                            <button type="submit" class="btn btn-primary me-2"><?= $isEdit ? 'Update' : 'Create' ?></button>
+                                            <?php if ($isEdit): ?>
+                                            <a href="foods.php" class="btn btn-light">Cancel</a>
+                                            <?php endif; ?>
+                                        </form>
+                                        </div>
+                                    </div>
+                                    </div>
+                                </div>
+                                </div>
+                                    </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                      </div>
                 
                           </div> 
                         </div>

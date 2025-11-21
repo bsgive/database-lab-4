@@ -1,3 +1,82 @@
+<?php
+require_once "db.php";
+
+/* ---------------------------
+   DELETE
+----------------------------*/
+if (isset($_GET['delete'])) {
+    $id = (int)$_GET['delete'];
+    $conn->query("DELETE FROM Owners WHERE OID = $id");
+    header("Location: owners.php");
+    exit;
+}
+
+/* ---------------------------
+   CREATE / UPDATE
+----------------------------*/
+$isEdit = false;
+$editOwner = [
+    "OID" => "",
+    "LastName" => "",
+    "Street" => "",
+    "City" => "",
+    "ZipCode" => "",
+    "State" => "",
+    "Age" => "",
+    "AnnualIncome" => ""
+];
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $oid     = (int)($_POST["OID"] ?? 0);
+    $lname   = $conn->real_escape_string($_POST["LastName"]);
+    $street  = $conn->real_escape_string($_POST["Street"]);
+    $city    = $conn->real_escape_string($_POST["City"]);
+    $zip     = $conn->real_escape_string($_POST["ZipCode"]);
+    $state   = $conn->real_escape_string($_POST["State"]);
+    $age     = (int)$_POST["Age"];
+    $income  = $_POST["AnnualIncome"] === "" ? "NULL" : (float)$_POST["AnnualIncome"];
+
+    if ($oid > 0) {
+        $sql = "UPDATE Owners SET
+                    LastName='$lname',
+                    Street='$street',
+                    City='$city',
+                    ZipCode='$zip',
+                    State='$state',
+                    Age=$age,
+                    AnnualIncome=$income
+                WHERE OID=$oid";
+        $conn->query($sql);
+    } else {
+        $sql = "INSERT INTO Owners (LastName, Street, City, ZipCode, State, Age, AnnualIncome)
+                VALUES ('$lname', '$street', '$city', '$zip', '$state', $age, $income)";
+        $conn->query($sql);
+    }
+
+    header("Location: owners.php");
+    exit;
+}
+
+/* ---------------------------
+   LOAD EDIT TARGET
+----------------------------*/
+if (isset($_GET["edit"])) {
+    $isEdit = true;
+    $id = (int)$_GET["edit"];
+    $res = $conn->query("SELECT * FROM Owners WHERE OID=$id");
+    if ($res && $res->num_rows > 0) {
+        $editOwner = $res->fetch_assoc();
+    }
+}
+
+/* ---------------------------
+   READ ALL
+----------------------------*/
+$owners = $conn->query("SELECT * FROM Owners ORDER BY OID DESC");
+?>
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -7,21 +86,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <title>Star Admin2 </title>
   <!-- plugins:css -->
-  <link rel="stylesheet" href="assets/vendors/feather/feather.css">
-  <link rel="stylesheet" href="assets/vendors/mdi/css/materialdesignicons.min.css">
-  <link rel="stylesheet" href="assets/vendors/ti-icons/css/themify-icons.css">
-  <link rel="stylesheet" href="assets/vendors/typicons/typicons.css">
-  <link rel="stylesheet" href="assets/vendors/simple-line-icons/css/simple-line-icons.css">
-  <link rel="stylesheet" href="assets/vendors/css/vendor.bundle.base.css">
-  <!-- endinject -->
-  <!-- Plugin css for this page -->
-  <link rel="stylesheet" href="assets/vendors/datatables.net-bs4/dataTables.bootstrap4.css">
-  <link rel="stylesheet" type="text/css" href="assets/js/select.dataTables.min.css">
-  <!-- End plugin css for this page -->
-  <!-- inject:css -->
-  <link rel="stylesheet" href="assets/css/vertical-layout-light/style.css">
-  <!-- endinject -->
-  <link rel="shortcut icon" href="assets/images/favicon.png" />
+  <link rel="stylesheet" href="../assets/vendors/feather/feather.css">
+<link rel="stylesheet" href="../assets/vendors/mdi/css/materialdesignicons.min.css">
+<link rel="stylesheet" href="../assets/vendors/ti-icons/css/themify-icons.css">
+<link rel="stylesheet" href="../assets/vendors/typicons/typicons.css">
+<link rel="stylesheet" href="../assets/vendors/simple-line-icons/css/simple-line-icons.css">
+<link rel="stylesheet" href="../assets/vendors/css/vendor.bundle.base.css">
+<!-- endinject -->
+<!-- Plugin css for this page -->
+<link rel="stylesheet" href="../assets/vendors/datatables.net-bs4/dataTables.bootstrap4.css">
+<link rel="stylesheet" type="text/css" href="../assets/js/select.dataTables.min.css">
+<!-- End plugin css for this page -->
+<!-- inject:css -->
+<link rel="stylesheet" href="../assets/css/vertical-layout-light/style.css">
+<!-- endinject -->
+<link rel="shortcut icon" href="../assets/images/favicon.png" />
 </head>
 
 <body> 
@@ -245,20 +324,22 @@
               <div class="home-tab">
                 <div class="d-sm-flex align-items-center justify-content-between border-bottom">
                   <ul class="nav nav-tabs" role="tablist">
-                    <li class="nav-item">
-                      <a class="nav-link" href="pages/pets.php">Pets</a>
+                         <li class="nav-item">
+                      <a class="nav-link" href="../index.html">Home</a>
+                <li class="nav-item">
+                      <a class="nav-link" href="pets.php">Pets</a>
                     </li>
                     <li class="nav-item">
-                      <a class="nav-link" href="pages/owners.php">Owners</a>
+                      <a class="nav-link" href="owners.php">Owners</a>
                     </li>
-                      <li class="nav-item">
-                      <a class="nav-link" href="pages/foods.php">Foods</a>
+                   <li class="nav-item">
+                      <a class="nav-link" href="foods.php">Foods</a>
+                    </li>                    
+                    <li class="nav-item">
+                      <a class="nav-link" href="owns.php">Owns</a>
                     </li>
                     <li class="nav-item">
-                      <a class="nav-link" href="pages/owns.php">Owns</a>
-                    </li>
-                    <li class="nav-item">
-                      <a class="nav-link border-0" href="pages/purchases.php">Purchases</a>
+                      <a class="nav-link border-0" href="Purchases.php">Purchases</a>
                     </li>
                   </ul>
                 </div>
@@ -275,13 +356,96 @@
                             <div class="card card-rounded">
                               <div class="card-body">
 
+                        <div class="table-responsive">
+                          <table class="table table-hover">
+                            <thead>
+                              <tr>
+                                <th>OID</th>
+                                <th>LastName</th>
+                                <th>Street</th>
+                                <th>City</th>
+                                <th>ZipCode</th>
+                                <th>State</th>
+                                <th>Age</th>
+                                <th>AnnualIncome</th>
+                                <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php while ($owner = $owners->fetch_assoc()): ?>
+                                <tr>
+                                    <td><?php echo $owner["OID"]; ?></td>
+                                    <td><?php echo $owner["LastName"]; ?></td>
+                                    <td><?php echo $owner["Street"]; ?></td>
+                                    <td><?php echo $owner["City"]; ?></td>
+                                    <td><?php echo $owner["ZipCode"]; ?></td>
+                                    <td><?php echo $owner["State"]; ?></td>
+                                    <td><?php echo $owner["Age"]; ?></td>
+                                    <td><?php echo $owner["AnnualIncome"]; ?></td>
+                                    <td>
+                                        <a href="owners.php?edit=<?php echo $owner["OID"]; ?>">Edit</a>
+                                        |
+                                        <a href="owners.php?delete=<?php echo $owner["OID"]; ?>" onclick="return confirm('Are you sure you want to delete this owner?');">Delete</a>
+                                    </td>
+                                </tr>
+                                <?php endwhile; ?>
+                            </tbody>
+                          </table>
+                          <div class="row">
+                                    <div class="col-12 grid-margin stretch-card">
+                                    <div class="card card-rounded">
+                                      <div class="card-body">
+                                            <h4 class="card-title"><?= $isEdit ? 'Edit Owner' : 'Add New Owner' ?></h4>
+                                        <form method="POST" class="forms-sample">
+                                          <input type="hidden" name="OID" value="<?= htmlspecialchars($editOwner['OID']) ?>">
+
+                                          <div class="form-group">
+                                            <label>LastName</label>
+                                            <input type="text" class="form-control" name="LastName" value="<?= htmlspecialchars($editOwner['LastName']) ?>" required>
+                                          </div>
+                                          
+                                          <div class="form-group">
+                                            <label>Age</label>
+                                            <input type="number" class="form-control" name="Age" value="<?= htmlspecialchars($editOwner['Age']) ?>" required>
+                                          </div>
+                                          
+                                          <div class="form-group">
+                                            <label>Street</label>
+                                            <input type="text" class="form-control" name="Street" value="<?= htmlspecialchars($editOwner['Street']) ?>">
+                                          </div>
+                                          
+                                          <div class="form-group">
+                                            <label>City</label>
+                                            <input type="text" class="form-control" name="City" value="<?= htmlspecialchars($editOwner['City']) ?>">
+                                          </div>
+                                          
+                                          <div class="form-group">
+                                            <label>Zip Code</label>
+                                            <input type="text" class="form-control" name="ZipCode" value="<?= htmlspecialchars($editOwner['ZipCode']) ?>">
+                                          </div>
+                                          
+                                          <div class="form-group">
+                                            <label>State</label>
+                                            <input type="text" class="form-control" name="State" value="<?= htmlspecialchars($editOwner['State']) ?>">
+                                          </div>
+                                          
+                                          <div class="form-group">
+                                            <label>Income</label>
+                                           <input type="text" class="form-control" name="AnnualIncome" value="<?= htmlspecialchars($editOwner['AnnualIncome']) ?>">
+                                          </div>
+                                          
+                                          <button type="submit" class="btn btn-primary me-2"><?= $isEdit ? 'Update' : 'Create' ?></button>
+                                          <?php if ($isEdit): ?>
+                                            <a href="pets.php" class="btn btn-light">Cancel</a>
+                                          <?php endif; ?>
+                                        </form>
+                                      </div>
+                                    </div>
+                                  </div>
+                        </div>                 
                               </div>
                             </div>
-                        </div>
-                      </div>
-                
-                          </div> 
-                        </div>
+                          </div>        
                       </div>
                     </div>
                   </div>

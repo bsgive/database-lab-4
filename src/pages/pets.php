@@ -1,3 +1,82 @@
+<?php
+require_once "db.php";
+
+//Deletes
+if (isset($_GET['delete'])) {
+    $id = (int)$_GET['delete'];
+    $conn->query("DELETE FROM Pets WHERE PetID = $id");
+    header("Location: pets.php");
+    exit;
+}
+
+//Handles create and update
+$isEdit = false;
+$editPet = [
+    "PetID" => "",
+    "Name" => "",
+    "Age" => "",
+    "Street" => "",
+    "City" => "",
+    "ZipCode" => "",
+    "State" => "",
+    "TypeofPet" => ""
+];
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $petID  = (int)($_POST["PetID"] ?? 0);
+    $name   = $conn->real_escape_string($_POST["Name"]);
+    $age    = (int)$_POST["Age"];
+    $street = $conn->real_escape_string($_POST["Street"]);
+    $city   = $conn->real_escape_string($_POST["City"]);
+    $zip    = $conn->real_escape_string($_POST["ZipCode"]);
+    $state  = $conn->real_escape_string($_POST["State"]);
+    $type   = $conn->real_escape_string($_POST["TypeofPet"]);
+
+    if ($petID > 0) {
+        // UPDATE
+        $sql = "UPDATE Pets SET
+                    Name='$name',
+                    Age=$age,
+                    Street='$street',
+                    City='$city',
+                    ZipCode='$zip',
+                    State='$state',
+                    TypeofPet='$type'
+                WHERE PetID=$petID";
+        $conn->query($sql);
+    } else {
+        // CREATE
+        $sql = "INSERT INTO Pets (Name, Age, Street, City, ZipCode, State, TypeofPet)
+                VALUES ('$name', $age, '$street', '$city', '$zip', '$state', '$type')";
+        $conn->query($sql);
+    }
+
+    header("Location: pets.php");
+    exit;
+}
+
+//Loads edit target
+if (isset($_GET["edit"])) {
+    $isEdit = true;
+    $id = (int)$_GET["edit"];
+    $res = $conn->query("SELECT * FROM Pets WHERE PetID=$id");
+    if ($res && $res->num_rows > 0) {
+        $editPet = $res->fetch_assoc();
+    }
+}
+
+//Reads all pets
+$pets = $conn->query("SELECT * FROM Pets ORDER BY PetID DESC");
+?>
+
+
+
+
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -7,21 +86,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <title>Star Admin2 </title>
   <!-- plugins:css -->
-  <link rel="stylesheet" href="assets/vendors/feather/feather.css">
-  <link rel="stylesheet" href="assets/vendors/mdi/css/materialdesignicons.min.css">
-  <link rel="stylesheet" href="assets/vendors/ti-icons/css/themify-icons.css">
-  <link rel="stylesheet" href="assets/vendors/typicons/typicons.css">
-  <link rel="stylesheet" href="assets/vendors/simple-line-icons/css/simple-line-icons.css">
-  <link rel="stylesheet" href="assets/vendors/css/vendor.bundle.base.css">
-  <!-- endinject -->
-  <!-- Plugin css for this page -->
-  <link rel="stylesheet" href="assets/vendors/datatables.net-bs4/dataTables.bootstrap4.css">
-  <link rel="stylesheet" type="text/css" href="assets/js/select.dataTables.min.css">
-  <!-- End plugin css for this page -->
-  <!-- inject:css -->
-  <link rel="stylesheet" href="assets/css/vertical-layout-light/style.css">
-  <!-- endinject -->
-  <link rel="shortcut icon" href="assets/images/favicon.png" />
+  <link rel="stylesheet" href="../assets/vendors/feather/feather.css">
+<link rel="stylesheet" href="../assets/vendors/mdi/css/materialdesignicons.min.css">
+<link rel="stylesheet" href="../assets/vendors/ti-icons/css/themify-icons.css">
+<link rel="stylesheet" href="../assets/vendors/typicons/typicons.css">
+<link rel="stylesheet" href="../assets/vendors/simple-line-icons/css/simple-line-icons.css">
+<link rel="stylesheet" href="../assets/vendors/css/vendor.bundle.base.css">
+<!-- endinject -->
+<!-- Plugin css for this page -->
+<link rel="stylesheet" href="../assets/vendors/datatables.net-bs4/dataTables.bootstrap4.css">
+<link rel="stylesheet" type="text/css" href="../assets/js/select.dataTables.min.css">
+<!-- End plugin css for this page -->
+<!-- inject:css -->
+<link rel="stylesheet" href="../assets/css/vertical-layout-light/style.css">
+<!-- endinject -->
+<link rel="shortcut icon" href="../assets/images/favicon.png" />
 </head>
 
 <body> 
@@ -245,20 +324,22 @@
               <div class="home-tab">
                 <div class="d-sm-flex align-items-center justify-content-between border-bottom">
                   <ul class="nav nav-tabs" role="tablist">
+                         <li class="nav-item">
+                      <a class="nav-link" href="../index.html">Home</a>
                     <li class="nav-item">
-                      <a class="nav-link" href="pages/pets.php">Pets</a>
+                      <a class="nav-link" href="pets.php">Pets</a>
                     </li>
                     <li class="nav-item">
-                      <a class="nav-link" href="pages/owners.php">Owners</a>
-                    </li>
-                      <li class="nav-item">
-                      <a class="nav-link" href="pages/foods.php">Foods</a>
+                      <a class="nav-link" href="owners.php">Owners</a>
                     </li>
                     <li class="nav-item">
-                      <a class="nav-link" href="pages/owns.php">Owns</a>
+                      <a class="nav-link" href="foods.php">Foods</a>
                     </li>
                     <li class="nav-item">
-                      <a class="nav-link border-0" href="pages/purchases.php">Purchases</a>
+                      <a class="nav-link" href="owns.php">Owns</a>
+                    </li>
+                    <li class="nav-item">
+                      <a class="nav-link border-0" href="Purchases.php">Purchases</a>
                     </li>
                   </ul>
                 </div>
@@ -274,7 +355,93 @@
                           <div class="col-12 grid-margin stretch-card">
                             <div class="card card-rounded">
                               <div class="card-body">
-
+                                <div class="table-responsive">
+                                  <table class="table table-hover">
+                                    <thead>
+                                      <tr>
+                                        <th> PetID </th>
+                                        <th> Name </th>
+                                        <th> Age </th>
+                                        <th> Street </th>
+                                        <th> City </th>
+                                        <th> ZipCode </th>
+                                        <th> State </th>
+                                        <th> TypeofPet </th>
+                                        <th> Actions </th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      <?php while ($pet = $pets->fetch_assoc()): ?>
+                                      <tr>
+                                        <td> <?= htmlspecialchars($pet['PetID']) ?> </td>
+                                        <td> <?= htmlspecialchars($pet['Name']) ?> </td>
+                                        <td> <?= htmlspecialchars($pet['Age']) ?> </td>
+                                        <td> <?= htmlspecialchars($pet['Street']) ?> </td>
+                                        <td> <?= htmlspecialchars($pet['City']) ?> </td>
+                                        <td> <?= htmlspecialchars($pet['ZipCode']) ?> </td>
+                                        <td> <?= htmlspecialchars($pet['State']) ?> </td>
+                                        <td> <?= htmlspecialchars($pet['TypeofPet']) ?> </td>
+                                        <td>
+                                          <a href="pets.php?edit=<?= $pet['PetID'] ?>">Edit</a> |
+                                          <a href="pets.php?delete=<?= $pet['PetID'] ?>" onclick="return confirm('Are you sure?')">Delete</a>
+                                        </td>
+                                      </tr>
+                                      <?php endwhile; ?>
+                                    </tbody>
+                                  
+                                  </table>
+                                  <div class="row">
+                                    <div class="col-12 grid-margin stretch-card">
+                                    <div class="card card-rounded">
+                                      <div class="card-body">
+                                        <h4 class="card-title"><?= $isEdit ? 'Edit Pet' : 'Add New Pet' ?></h4>
+                                        <form method="POST" class="forms-sample">
+                                          <input type="hidden" name="PetID" value="<?= htmlspecialchars($editPet['PetID']) ?>">
+                                          
+                                          <div class="form-group">
+                                            <label>Name</label>
+                                            <input type="text" class="form-control" name="Name" value="<?= htmlspecialchars($editPet['Name']) ?>" required>
+                                          </div>
+                                          
+                                          <div class="form-group">
+                                            <label>Age</label>
+                                            <input type="number" class="form-control" name="Age" value="<?= htmlspecialchars($editPet['Age']) ?>" required>
+                                          </div>
+                                          
+                                          <div class="form-group">
+                                            <label>Street</label>
+                                            <input type="text" class="form-control" name="Street" value="<?= htmlspecialchars($editPet['Street']) ?>">
+                                          </div>
+                                          
+                                          <div class="form-group">
+                                            <label>City</label>
+                                            <input type="text" class="form-control" name="City" value="<?= htmlspecialchars($editPet['City']) ?>">
+                                          </div>
+                                          
+                                          <div class="form-group">
+                                            <label>Zip Code</label>
+                                            <input type="text" class="form-control" name="ZipCode" value="<?= htmlspecialchars($editPet['ZipCode']) ?>">
+                                          </div>
+                                          
+                                          <div class="form-group">
+                                            <label>State</label>
+                                            <input type="text" class="form-control" name="State" value="<?= htmlspecialchars($editPet['State']) ?>">
+                                          </div>
+                                          
+                                          <div class="form-group">
+                                            <label>Type of Pet</label>
+                                            <input type="text" class="form-control" name="TypeofPet" value="<?= htmlspecialchars($editPet['TypeofPet']) ?>">
+                                          </div>
+                                          
+                                          <button type="submit" class="btn btn-primary me-2"><?= $isEdit ? 'Update' : 'Create' ?></button>
+                                          <?php if ($isEdit): ?>
+                                            <a href="pets.php" class="btn btn-light">Cancel</a>
+                                          <?php endif; ?>
+                                        </form>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                         </div>

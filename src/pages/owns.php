@@ -1,3 +1,93 @@
+<?php
+require_once "db.php";
+
+/* ---------------------------
+   FK LISTS for dropdowns
+----------------------------*/
+$petsList = $conn->query("SELECT PetID, Name FROM Pets ORDER BY Name");
+$ownersList = $conn->query("SELECT OID, LastName FROM Owners ORDER BY LastName");
+
+/* ---------------------------
+   DELETE (composite key)
+----------------------------*/
+if (isset($_GET['delete_pet'], $_GET['delete_oid'], $_GET['delete_year'])) {
+    $petID = (int)$_GET['delete_pet'];
+    $oid   = (int)$_GET['delete_oid'];
+    $year  = (int)$_GET['delete_year'];
+
+    $conn->query("DELETE FROM Owns WHERE PetID=$petID AND OID=$oid AND Year=$year");
+    header("Location: owns.php");
+    exit;
+}
+
+/* ---------------------------
+   CREATE / UPDATE
+----------------------------*/
+$isEdit = false;
+$editOwns = [
+    "PetID" => "",
+    "OID" => "",
+    "Year" => "",
+    "PetAgeatOwnership" => "",
+    "PricePaid" => ""
+];
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $petID = (int)$_POST["PetID"];
+    $oid   = (int)$_POST["OID"];
+    $year  = (int)$_POST["Year"];
+    $petAge = (int)$_POST["PetAgeatOwnership"];
+    $price = (float)$_POST["PricePaid"];
+
+    // If hidden original keys exist, it's UPDATE
+    $origPet = (int)($_POST["origPetID"] ?? 0);
+    $origOid = (int)($_POST["origOID"] ?? 0);
+    $origYear= (int)($_POST["origYear"] ?? 0);
+
+    if ($origPet && $origOid && $origYear) {
+        $sql = "UPDATE Owns SET
+                    PetID=$petID,
+                    OID=$oid,
+                    Year=$year,
+                    PetAgeatOwnership=$petAge,
+                    PricePaid=$price
+                WHERE PetID=$origPet AND OID=$origOid AND Year=$origYear";
+        $conn->query($sql);
+    } else {
+        $sql = "INSERT INTO Owns (PetID, Year, OID, PetAgeatOwnership, PricePaid)
+                VALUES ($petID, $year, $oid, $petAge, $price)";
+        $conn->query($sql);
+    }
+
+    header("Location: owns.php");
+    exit;
+}
+
+/* ---------------------------
+   LOAD EDIT TARGET
+----------------------------*/
+if (isset($_GET["edit_pet"], $_GET["edit_oid"], $_GET["edit_year"])) {
+    $isEdit = true;
+    $petID = (int)$_GET["edit_pet"];
+    $oid   = (int)$_GET["edit_oid"];
+    $year  = (int)$_GET["edit_year"];
+
+    $res = $conn->query("SELECT * FROM Owns WHERE PetID=$petID AND OID=$oid AND Year=$year");
+    if ($res && $res->num_rows > 0) {
+        $editOwns = $res->fetch_assoc();
+    }
+}
+
+$ownsRows = $conn->query("
+    SELECT o.*, p.Name AS PetName, ow.LastName AS OwnerName
+    FROM Owns o
+    JOIN Pets p ON p.PetID=o.PetID
+    JOIN Owners ow ON ow.OID=o.OID
+    ORDER BY o.Year DESC
+");
+?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -7,21 +97,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <title>Star Admin2 </title>
   <!-- plugins:css -->
-  <link rel="stylesheet" href="assets/vendors/feather/feather.css">
-  <link rel="stylesheet" href="assets/vendors/mdi/css/materialdesignicons.min.css">
-  <link rel="stylesheet" href="assets/vendors/ti-icons/css/themify-icons.css">
-  <link rel="stylesheet" href="assets/vendors/typicons/typicons.css">
-  <link rel="stylesheet" href="assets/vendors/simple-line-icons/css/simple-line-icons.css">
-  <link rel="stylesheet" href="assets/vendors/css/vendor.bundle.base.css">
-  <!-- endinject -->
-  <!-- Plugin css for this page -->
-  <link rel="stylesheet" href="assets/vendors/datatables.net-bs4/dataTables.bootstrap4.css">
-  <link rel="stylesheet" type="text/css" href="assets/js/select.dataTables.min.css">
-  <!-- End plugin css for this page -->
-  <!-- inject:css -->
-  <link rel="stylesheet" href="assets/css/vertical-layout-light/style.css">
-  <!-- endinject -->
-  <link rel="shortcut icon" href="assets/images/favicon.png" />
+  <link rel="stylesheet" href="../assets/vendors/feather/feather.css">
+<link rel="stylesheet" href="../assets/vendors/mdi/css/materialdesignicons.min.css">
+<link rel="stylesheet" href="../assets/vendors/ti-icons/css/themify-icons.css">
+<link rel="stylesheet" href="../assets/vendors/typicons/typicons.css">
+<link rel="stylesheet" href="../assets/vendors/simple-line-icons/css/simple-line-icons.css">
+<link rel="stylesheet" href="../assets/vendors/css/vendor.bundle.base.css">
+<!-- endinject -->
+<!-- Plugin css for this page -->
+<link rel="stylesheet" href="../assets/vendors/datatables.net-bs4/dataTables.bootstrap4.css">
+<link rel="stylesheet" type="text/css" href="../assets/js/select.dataTables.min.css">
+<!-- End plugin css for this page -->
+<!-- inject:css -->
+<link rel="stylesheet" href="../assets/css/vertical-layout-light/style.css">
+<!-- endinject -->
+<link rel="shortcut icon" href="../assets/images/favicon.png" />
 </head>
 
 <body> 
@@ -245,20 +335,24 @@
               <div class="home-tab">
                 <div class="d-sm-flex align-items-center justify-content-between border-bottom">
                   <ul class="nav nav-tabs" role="tablist">
-                    <li class="nav-item">
-                      <a class="nav-link" href="pages/pets.php">Pets</a>
+                         <li class="nav-item">
+                      <a class="nav-link" href="../index.html">Home</a>
+                 <li class="nav-item">
+                      <a class="nav-link" href="pets.php">Pets</a>
                     </li>
                     <li class="nav-item">
-                      <a class="nav-link" href="pages/owners.php">Owners</a>
-                    </li>
-                      <li class="nav-item">
-                      <a class="nav-link" href="pages/foods.php">Foods</a>
+                      <a class="nav-link" href="owners.php">Owners</a>
                     </li>
                     <li class="nav-item">
-                      <a class="nav-link" href="pages/owns.php">Owns</a>
+                      <a class="nav-link" href="foods.php">Foods</a>
                     </li>
                     <li class="nav-item">
-                      <a class="nav-link border-0" href="pages/purchases.php">Purchases</a>
+                      <a class="nav-link" href="owns.php">Owns</a>
+                    </li>
+
+                    <li class="nav-item">
+                      <a class="nav-link border-0" href="Purchases.php">Purchases</a>
+                    </li>
                     </li>
                   </ul>
                 </div>
@@ -274,12 +368,107 @@
                           <div class="col-12 grid-margin stretch-card">
                             <div class="card card-rounded">
                               <div class="card-body">
-
-                              </div>
+                                <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                    <tr>
+                                        <th>Pet Name</th>
+                                        <th>Owner Name</th>
+                                        <th>Year</th>
+                                        <th>Pet Age at Ownership</th>
+                                        <th>Price Paid</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <?php while ($own = $ownsRows->fetch_assoc()): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($own['PetName']) ?></td>
+                                        <td><?= htmlspecialchars($own['OwnerName']) ?></td>
+                                        <td><?= htmlspecialchars($own['Year']) ?></td>
+                                        <td><?= htmlspecialchars($own['PetAgeatOwnership']) ?></td>
+                                        <td>$<?= number_format($own['PricePaid'], 2) ?></td>
+                                        <td>
+                                        <a href="owns.php?edit_pet=<?= $own['PetID'] ?>&edit_oid=<?= $own['OID'] ?>&edit_year=<?= $own['Year'] ?>">Edit</a>
+                                        |
+                                        <a href="owns.php?delete_pet=<?= $own['PetID'] ?>&delete_oid=<?= $own['OID'] ?>&delete_year=<?= $own['Year'] ?>" 
+                                            onclick="return confirm('Are you sure you want to delete this ownership record?');">Delete</a>
+                                        </td>
+                                    </tr>
+                                    <?php endwhile; ?>
+                                    </tbody>
+                                </table>
+                                
+                                <div class="row">
+                                    <div class="col-12 grid-margin stretch-card">
+                                    <div class="card card-rounded">
+                                        <div class="card-body">
+                                        <h4 class="card-title"><?= $isEdit ? 'Edit Ownership' : 'Add New Ownership' ?></h4>
+                                        <form method="POST" class="forms-sample">
+                                            <?php if ($isEdit): ?>
+                                            <input type="hidden" name="origPetID" value="<?= htmlspecialchars($editOwns['PetID']) ?>">
+                                            <input type="hidden" name="origOID" value="<?= htmlspecialchars($editOwns['OID']) ?>">
+                                            <input type="hidden" name="origYear" value="<?= htmlspecialchars($editOwns['Year']) ?>">
+                                            <?php endif; ?>
+                                            
+                                            <div class="form-group">
+                                            <label>Pet</label>
+                                            <select class="form-control" name="PetID" required>
+                                                <option value="">Select a Pet</option>
+                                                <?php 
+                                                $petsList->data_seek(0); // Reset pointer
+                                                while ($pet = $petsList->fetch_assoc()): ?>
+                                                <option value="<?= $pet['PetID'] ?>" <?= ($editOwns['PetID'] == $pet['PetID']) ? 'selected' : '' ?>>
+                                                    <?= htmlspecialchars($pet['Name']) ?>
+                                                </option>
+                                                <?php endwhile; ?>
+                                            </select>
+                                            </div>
+                                            
+                                            <div class="form-group">
+                                            <label>Owner</label>
+                                            <select class="form-control" name="OID" required>
+                                                <option value="">Select an Owner</option>
+                                                <?php 
+                                                $ownersList->data_seek(0); // Reset pointer
+                                                while ($owner = $ownersList->fetch_assoc()): ?>
+                                                <option value="<?= $owner['OID'] ?>" <?= ($editOwns['OID'] == $owner['OID']) ? 'selected' : '' ?>>
+                                                    <?= htmlspecialchars($owner['LastName']) ?>
+                                                </option>
+                                                <?php endwhile; ?>
+                                            </select>
+                                            </div>
+                                            
+                                            <div class="form-group">
+                                            <label>Year</label>
+                                            <input type="number" class="form-control" name="Year" value="<?= htmlspecialchars($editOwns['Year']) ?>" required>
+                                            </div>
+                                            
+                                            <div class="form-group">
+                                            <label>Pet Age at Ownership</label>
+                                            <input type="number" class="form-control" name="PetAgeatOwnership" value="<?= htmlspecialchars($editOwns['PetAgeatOwnership']) ?>" required>
+                                            </div>
+                                            
+                                            <div class="form-group">
+                                            <label>Price Paid</label>
+                                            <input type="number" step="0.01" class="form-control" name="PricePaid" value="<?= htmlspecialchars($editOwns['PricePaid']) ?>" required>
+                                            </div>
+                                            
+                                            <button type="submit" class="btn btn-primary me-2"><?= $isEdit ? 'Update' : 'Create' ?></button>
+                                            <?php if ($isEdit): ?>
+                                            <a href="owns.php" class="btn btn-light">Cancel</a>
+                                            <?php endif; ?>
+                                                </form>
+                                                </div>
+                                            </div>
+                                            </div>
+                                        </div>
+                                        </div>
+                                    </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                      </div>
-                
+
                           </div> 
                         </div>
                       </div>
